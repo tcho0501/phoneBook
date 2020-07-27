@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import personsServices from './services/persons'
-// import axios from 'axios'
+import Notification from './components/Notification'
 import Persons from './components/Persons'
 import PersonForm from './components/PersonForm'
 import Filter from './components/Filter'
@@ -10,9 +10,9 @@ import Filter from './components/Filter'
 
 
 const App = () => {
-  const [ persons, setPersons ] = useState([
-    // { name: 'Arto Hellas', phoneNumber: '85291973147' }
-  ]) 
+  const [ persons, setPersons ] = useState([]) 
+  const [ notifMessage, setNotifMessage ] = useState('')
+  const [ errorStatus, setErrorStatus ] = useState(false);
   const [ newName, setNewName ] = useState('')
   const [ newNumber, setNewNumber ] = useState('')
   const [ filterValue, setFilterValue ] = useState('')
@@ -32,6 +32,26 @@ const App = () => {
     setNewName(event.target.value)
   }
 
+  const createSuccessNotif = (message) => {
+    setNotifMessage(message)
+    setErrorStatus(false)
+    setTimeout(() => {
+      console.log('reset stuff')
+      setNotifMessage('')
+      setErrorStatus(false)
+    }, 5000)
+  }
+
+  const createErrorNotif = (message) => {
+    setNotifMessage(message)
+    setErrorStatus(true)
+    setTimeout(() => {
+      console.log('reset stuff')
+      setNotifMessage('')
+      setErrorStatus(false)
+    }, 5000)
+  }
+
   const handleAddButton = (event) => {
     // console.log('name box:', event.target.value)
     console.log('add button pressed')
@@ -49,13 +69,18 @@ const App = () => {
         personsServices
           .update(newPerson.id, newPerson)
           .then(response => {
-            console.log('added: ', newPerson)
+            console.log('updated: ', newPerson)
+            createSuccessNotif(`${newPerson.name} updated successfully`)
             setPersons(persons.map(person => person.id === newPerson.id ? newPerson : person))
+          })
+          .catch(error => {
+            createErrorNotif(`${newPerson.name} was already removed from server`)
+            setPersons(persons.filter(n => n.id !== oldPersonObj.id))
           })
       }
     } else if (newName === '' || newNumber === '') {
       alert(`Empty phone or name`)
-    }else {
+    } else {
       console.log('adding:', newName)
       const newPerson = {
         name: newName,
@@ -65,6 +90,7 @@ const App = () => {
         .create(newPerson)
         .then(response => {
           console.log('added: ', newPerson)
+          createSuccessNotif(`${newPerson.name} added successfully`)
           setPersons(persons.concat(response))
         })
     }
@@ -85,9 +111,16 @@ const App = () => {
       .deleteItem(id)
       .then(response=> {
         console.log(response)
+        console.log(`${name} deleted successfully`)
+        createSuccessNotif(`${name} deleted successfully`)
         setPersons(persons.filter(person => {
           return person.id.toString() !== id
         }))
+      })
+      .catch(error => {
+        console.log('Catch error',error)
+        createErrorNotif(`${name} was already removed from server`)
+        setPersons(persons.filter(n => n.id.toString() !== id))
       })
     }
     
@@ -113,6 +146,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message = {notifMessage} errorStatus = {errorStatus}/>
       <Filter filterValue = {filterValue} handleFilterValueChange = {handleFilterValueChange}/>
       <h3>Add New Number</h3>
       <PersonForm handleAddButton = {handleAddButton} newName= {newName} handleNameBoxChange= {handleNameBoxChange} newNumber = {newNumber} handleNumberBoxChange = {handleNumberBoxChange}/>
